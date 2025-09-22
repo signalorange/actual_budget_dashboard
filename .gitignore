@@ -1,2 +1,23 @@
 __pycache__
 .DS_Store
+
+# Node.js dependencies
+node_modules/
+package-lock.json
+
+# Environment configuration
+.env
+
+# Actual Budget data cache
+actual_data/
+
+# Python virtual environment
+venv/
+env/
+.venv/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
