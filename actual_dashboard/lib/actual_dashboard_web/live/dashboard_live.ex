@@ -3,7 +3,7 @@ defmodule ActualDashboardWeb.DashboardLive do
   Main dashboard LiveView showing financial overview
   """
   use ActualDashboardWeb, :live_view
-  
+
   alias ActualDashboard.DataCache
   require Logger
 
@@ -35,7 +35,7 @@ defmodule ActualDashboardWeb.DashboardLive do
         <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
           <div class="flex justify-between items-center">
             <h1 class="text-3xl font-bold text-gray-900">
-              Financial Dashboard
+              Actual Dashboard
             </h1>
             <div class="flex items-center space-x-4">
               <span class="text-sm text-gray-500">
@@ -55,33 +55,33 @@ defmodule ActualDashboardWeb.DashboardLive do
       <!-- Main Content -->
       <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div class="px-4 py-6 sm:px-0">
-          
+
           <!-- Summary Cards -->
           <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-8">
-            <.summary_card 
-              title="Total Assets" 
-              value={@current_assets} 
+            <.summary_card
+              title="Total Assets"
+              value={@current_assets}
               change={@assets_change}
               color="green"
               is_percentage={false}
             />
-            <.summary_card 
-              title="Total Debts" 
-              value={@current_debts} 
+            <.summary_card
+              title="Total Debts"
+              value={@current_debts}
               change={@debts_change}
               color="red"
               is_percentage={false}
             />
-            <.summary_card 
-              title="Net Worth" 
-              value={@current_net_worth} 
+            <.summary_card
+              title="Net Worth"
+              value={@current_net_worth}
               change={@net_worth_change}
               color="blue"
               is_percentage={false}
             />
-            <.summary_card 
-              title="Savings Rate" 
-              value={@current_savings_rate} 
+            <.summary_card
+              title="Savings Rate"
+              value={@current_savings_rate}
               change={@savings_rate_change}
               color="purple"
               is_percentage={true}
@@ -94,15 +94,15 @@ defmodule ActualDashboardWeb.DashboardLive do
             <div class="bg-white overflow-hidden shadow rounded-lg">
               <div class="p-6">
                 <h3 class="text-lg font-medium text-gray-900 mb-4">Net Worth Over Time</h3>
-                <div id="net-worth-chart" phx-hook="NetWorthChart" data-chart-data={Jason.encode!(@net_worth_chart_data)} style="height: 400px;"></div>
-              </div>
+                <canvas id="net-worth-chart" phx-hook="NetWorthChart" data-chart-data={Jason.encode!(@net_worth_chart_data)} class="w-full" style="max-height:400px;"></canvas>
+    </div>
             </div>
 
             <!-- Cash Flow Chart -->
             <div class="bg-white overflow-hidden shadow rounded-lg">
               <div class="p-6">
                 <h3 class="text-lg font-medium text-gray-900 mb-4">Monthly Cash Flow</h3>
-                <div id="cashflow-chart" phx-hook="CashFlowChart" data-chart-data={Jason.encode!(@cashflow_chart_data)} style="height: 400px;"></div>
+                <canvas id="cashflow-chart" phx-hook="CashFlowChart" data-chart-data={Jason.encode!(@cashflow_chart_data)} class="w-full" style="max-height:400px;"></canvas>
               </div>
             </div>
           </div>
@@ -208,30 +208,34 @@ defmodule ActualDashboardWeb.DashboardLive do
 
   defp load_dashboard_data(socket) do
     data = DataCache.get_dashboard_data()
-    
+
     # Calculate current values from latest month
     latest_net_worth = get_latest_month_data(data.net_worth_by_month)
     latest_cashflow = get_latest_month_data(data.cashflow_by_month)
-    
+
     current_assets = calculate_total_assets(latest_net_worth)
-    current_debts = calculate_total_debts(latest_net_worth) 
+    current_debts = calculate_total_debts(latest_net_worth)
     current_net_worth = current_assets + current_debts
-    current_savings_rate = Map.get(latest_cashflow, "income", 0) |> calculate_current_savings_rate(Map.get(latest_cashflow, "expenses", 0))
+
+    current_savings_rate =
+      Map.get(latest_cashflow, "income", 0)
+      |> calculate_current_savings_rate(Map.get(latest_cashflow, "expenses", 0))
 
     # Prepare chart data
     net_worth_chart_data = prepare_net_worth_chart_data(data.net_worth_by_month)
     cashflow_chart_data = prepare_cashflow_chart_data(data.cashflow_by_month)
-    
+
     # Account group balances
     account_group_balances = latest_net_worth || %{}
 
     socket
     |> assign(:last_updated, data.last_updated)
     |> assign(:current_assets, current_assets)
-    |> assign(:current_debts, current_debts)  
+    |> assign(:current_debts, current_debts)
     |> assign(:current_net_worth, current_net_worth)
     |> assign(:current_savings_rate, current_savings_rate)
-    |> assign(:assets_change, nil)  # TODO: Calculate changes
+    # TODO: Calculate changes
+    |> assign(:assets_change, nil)
     |> assign(:debts_change, nil)
     |> assign(:net_worth_change, nil)
     |> assign(:savings_rate_change, nil)
@@ -247,6 +251,7 @@ defmodule ActualDashboardWeb.DashboardLive do
     |> List.first()
     |> then(fn month -> if month, do: Map.get(data, month), else: %{} end)
   end
+
   defp get_latest_month_data(_), do: %{}
 
   defp calculate_total_assets(net_worth_month) when is_map(net_worth_month) do
@@ -254,6 +259,7 @@ defmodule ActualDashboardWeb.DashboardLive do
     |> Enum.filter(fn {key, _value} -> String.starts_with?(key, "assets_") end)
     |> Enum.reduce(0, fn {_key, value}, acc -> acc + (value || 0) end)
   end
+
   defp calculate_total_assets(_), do: 0
 
   defp calculate_total_debts(net_worth_month) when is_map(net_worth_month) do
@@ -261,82 +267,93 @@ defmodule ActualDashboardWeb.DashboardLive do
     |> Enum.filter(fn {key, _value} -> String.starts_with?(key, "liabilities_") end)
     |> Enum.reduce(0, fn {_key, value}, acc -> acc + (value || 0) end)
   end
+
   defp calculate_total_debts(_), do: 0
 
   defp calculate_current_savings_rate(income, expenses) when income > 0 do
     (income - expenses) / income
   end
+
   defp calculate_current_savings_rate(_, _), do: 0.0
 
   defp prepare_net_worth_chart_data(net_worth_by_month) when is_map(net_worth_by_month) do
     months = Map.keys(net_worth_by_month) |> Enum.sort()
-    
+
     %{
       labels: months,
       datasets: [
         %{
           label: "Assets",
-          data: Enum.map(months, fn month ->
-            calculate_total_assets(Map.get(net_worth_by_month, month, %{}))
-          end),
+          data:
+            Enum.map(months, fn month ->
+              calculate_total_assets(Map.get(net_worth_by_month, month, %{}))
+            end),
           backgroundColor: "rgba(34, 197, 94, 0.8)",
           borderColor: "rgba(34, 197, 94, 1)"
         },
         %{
-          label: "Debts",  
-          data: Enum.map(months, fn month ->
-            calculate_total_debts(Map.get(net_worth_by_month, month, %{}))
-          end),
+          label: "Debts",
+          data:
+            Enum.map(months, fn month ->
+              calculate_total_debts(Map.get(net_worth_by_month, month, %{}))
+            end),
           backgroundColor: "rgba(239, 68, 68, 0.8)",
           borderColor: "rgba(239, 68, 68, 1)"
         }
       ]
     }
   end
+
   defp prepare_net_worth_chart_data(_), do: %{labels: [], datasets: []}
 
   defp prepare_cashflow_chart_data(cashflow_by_month) when is_map(cashflow_by_month) do
     months = Map.keys(cashflow_by_month) |> Enum.sort()
-    
+
     %{
       labels: months,
       datasets: [
         %{
           label: "Income",
-          data: Enum.map(months, fn month ->
-            Map.get(cashflow_by_month, month, %{}) |> Map.get("income", 0)
-          end),
+          data:
+            Enum.map(months, fn month ->
+              Map.get(cashflow_by_month, month, %{}) |> Map.get("income", 0)
+            end),
           backgroundColor: "rgba(34, 197, 94, 0.8)"
         },
         %{
           label: "Expenses",
-          data: Enum.map(months, fn month ->
-            Map.get(cashflow_by_month, month, %{}) |> Map.get("expenses", 0)
-          end),
+          data:
+            Enum.map(months, fn month ->
+              Map.get(cashflow_by_month, month, %{}) |> Map.get("expenses", 0)
+            end),
           backgroundColor: "rgba(239, 68, 68, 0.8)"
         }
       ]
     }
   end
+
   defp prepare_cashflow_chart_data(_), do: %{labels: [], datasets: []}
 
   defp format_currency(amount) when is_number(amount) do
     # Convert to float if it's an integer
     float_amount = if is_integer(amount), do: amount / 1.0, else: amount
-    
+
     :erlang.float_to_binary(float_amount, decimals: 2)
     |> String.replace(~r/\B(?=(\d{3})+(?!\d))/, ",")
     |> then(fn str -> "$#{str}" end)
   end
+
   defp format_currency(_), do: "$0.00"
 
   defp format_percentage(rate) when is_number(rate) do
     percentage = rate * 100
     :erlang.float_to_binary(percentage, decimals: 1) <> "%"
   end
+
   defp format_percentage(_), do: "0.0%"
 
   defp format_datetime(nil), do: "Never"
+
   defp format_datetime(datetime) do
     Calendar.strftime(datetime, "%Y-%m-%d %H:%M:%S UTC")
   end
@@ -350,7 +367,7 @@ defmodule ActualDashboardWeb.DashboardLive do
   end
 
   defp get_color_classes("green"), do: "bg-green-500"
-  defp get_color_classes("red"), do: "bg-red-500" 
+  defp get_color_classes("red"), do: "bg-red-500"
   defp get_color_classes("blue"), do: "bg-blue-500"
   defp get_color_classes("purple"), do: "bg-purple-500"
   defp get_color_classes(_), do: "bg-gray-500"

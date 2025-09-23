@@ -64,7 +64,7 @@ defmodule ActualDashboard.HttpClient do
     )
 
     Process.send_after(self(), :health_check, 1000)
-    
+
     state = %__MODULE__{
       base_url: base_url,
       api_key: api_key,
@@ -77,17 +77,17 @@ defmodule ActualDashboard.HttpClient do
 
   def handle_call({:get_budget_resource, resource}, _from, state) do
     endpoint = "/budgets/#{state.budget_sync_id}/#{resource}"
-    
+
     case Req.get(state.client, url: endpoint) do
       {:ok, %{status: 200, body: body}} ->
         # Extract data from the response wrapper
         data = Map.get(body, "data", body)
         {:reply, {:ok, data}, state}
-      
+
       {:ok, %{status: status, body: body}} ->
         Logger.warning("API request failed: #{status} - #{inspect(body)}")
         {:reply, {:error, {status, body}}, state}
-      
+
       {:error, reason} ->
         Logger.error("HTTP request failed: #{inspect(reason)}")
         {:reply, {:error, reason}, state}
@@ -110,14 +110,14 @@ defmodule ActualDashboard.HttpClient do
                 Map.put(tx, "account", account_id)
               end)
               acc ++ enriched_transactions
-            
+
             {:error, _} -> acc
             _ -> acc
           end
         end)
-        
+
         {:reply, {:ok, all_transactions}, state}
-        
+
       {:error, reason} ->
         Logger.error("Failed to get accounts for transactions: #{inspect(reason)}")
         {:reply, {:error, reason}, state}

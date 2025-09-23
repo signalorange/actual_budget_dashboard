@@ -2,9 +2,11 @@
 
 A modern, real-time financial dashboard for Actual Budget built with **Elixir/Phoenix and LiveView**.
 
+![picture.png]
+
 ## ✨ New Phoenix/LiveView Implementation
 
-This project has been **completely rewritten** in Elixir/Phoenix for better performance, real-time updates, and modern architecture.
+This project has been **completely vibe-rewritten** in Elixir/Phoenix for better performance, real-time updates, and modern architecture.
 
 ### Quick Start
 
@@ -14,7 +16,7 @@ cp .env.example .env
 # Edit .env with your HTTP API details
 mix deps.get
 npm install --prefix assets
-export $(cat .env | xargs)
+source .env
 mix phx.server
 # Visit http://localhost:4000
 ```
@@ -85,7 +87,7 @@ The Phoenix version provides the same financial insights with a modern, responsi
 
 1. **Set up actual-http-api** following their [documentation](https://github.com/jhonderson/actual-http-api)
 2. **Clone this repo** and follow the setup in `actual_dashboard/README.md`
-3. **Configure your account groups** in the Phoenix application
+3. **Configure your .env**
 4. **Enjoy real-time financial dashboards!**
 
 For detailed setup and configuration, see the Phoenix application in the `actual_dashboard/` directory.

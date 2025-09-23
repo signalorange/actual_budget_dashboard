@@ -30,16 +30,16 @@ defmodule ActualDashboard.Application do
   defp get_api_config do
     api_key = Application.get_env(:actual_dashboard, :api_key, "demo_key_12345")
     budget_sync_id = Application.get_env(:actual_dashboard, :budget_sync_id, "demo_sync_id")
-    
+
     # Log warnings if using demo values
     if api_key == "demo_key_12345" do
       Logger.warning("Using demo API key. Set ACTUAL_HTTP_API_KEY environment variable.")
     end
-    
+
     if budget_sync_id == "demo_sync_id" do
       Logger.warning("Using demo sync ID. Set ACTUAL_BUDGET_SYNC_ID environment variable.")
     end
-    
+
     [
       base_url: Application.get_env(:actual_dashboard, :api_base_url, "http://localhost:5007"),
       api_key: api_key,
@@ -48,21 +48,32 @@ defmodule ActualDashboard.Application do
   end
 
   defp get_account_groups_config do
-    [
-      account_groups: Application.get_env(:actual_dashboard, :account_groups, %{
-        # Assets
-        "assets_liquid" => ["Ally Savings", "Bank of America", "Capital One Checking"],
-        "assets_restricted" => ["Roth IRA", "Vanguard 401k"],
-        "assets_investment" => [],
-        "assets_physical" => ["House Asset"],
-        
-        # Liabilities  
-        "liabilities_installment" => [],
-        "liabilities_physical" => ["Mortgage"],
-        "liabilities_revolving" => [],
-        "liabilities_transacting" => ["HSBC"]
-      })
-    ]
+    account_groups_json = System.get_env("ACCOUNT_GROUPS")
+
+    account_groups =
+      case account_groups_json do
+        nil ->
+          %{
+            # Assets
+            "assets_liquid" => ["Ally Savings", "Bank of America", "Capital One Checking"],
+            "assets_restricted" => ["Roth IRA", "Vanguard 401k"],
+            "assets_investment" => [],
+            "assets_physical" => ["House Asset"],
+            # Liabilities
+            "liabilities_installment" => [],
+            "liabilities_physical" => ["Mortgage"],
+            "liabilities_revolving" => [],
+            "liabilities_transacting" => ["HSBC"]
+          }
+
+        json ->
+          case Jason.decode(json) do
+            {:ok, parsed} -> parsed
+            {:error, _} -> %{}
+          end
+      end
+
+    [account_groups: account_groups]
   end
 
   # Tell Phoenix to update the endpoint configuration

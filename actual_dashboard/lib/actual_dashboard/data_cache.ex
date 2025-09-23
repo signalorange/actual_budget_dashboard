@@ -43,15 +43,17 @@ defmodule ActualDashboard.DataCache do
 
   def init(opts) do
     account_groups = Keyword.get(opts, :account_groups, default_account_groups())
-    
-    # Load data immediately, then schedule periodic refresh
-    send(self(), :load_initial_data)
-    Process.send_after(self(), :refresh_data, @refresh_interval)
 
+    # Load data immediately on startup
     state = %__MODULE__{
       account_groups: account_groups,
       last_updated: nil
     }
+
+    state = load_and_process_data(state)
+
+    # Schedule periodic refresh
+    Process.send_after(self(), :refresh_data, @refresh_interval)
 
     {:ok, state}
   end
@@ -80,10 +82,6 @@ defmodule ActualDashboard.DataCache do
     {:noreply, load_and_process_data(state)}
   end
 
-  def handle_info(:load_initial_data, state) do
-    {:noreply, load_and_process_data(state)}
-  end
-
   def handle_info(:refresh_data, state) do
     new_state = load_and_process_data(state)
     Process.send_after(self(), :refresh_data, @refresh_interval)
@@ -102,32 +100,51 @@ defmodule ActualDashboard.DataCache do
       {:ok, payees} = HttpClient.get_payees()
       {:ok, transactions} = HttpClient.get_all_transactions()
 
-      Logger.info("Loaded #{length(accounts)} accounts, #{length(categories)} categories, #{length(transactions)} transactions")
+      Logger.info(
+        "Loaded #{length(accounts)} accounts, #{length(categories)} categories, #{length(transactions)} transactions"
+      )
 
       # Process data for dashboard
-      net_worth_by_month = DataProcessor.calculate_net_worth_by_month(
-        transactions, accounts, state.account_groups
-      )
+      net_worth_by_month =
+        DataProcessor.calculate_net_worth_by_month(
+          transactions,
+          accounts,
+          state.account_groups
+        )
 
-      cashflow_by_month = DataProcessor.calculate_cashflow_by_month(
-        transactions, categories
-      )
+      cashflow_by_month =
+        DataProcessor.calculate_cashflow_by_month(
+          transactions,
+          categories
+        )
 
       metrics = DataProcessor.calculate_metrics(net_worth_by_month, cashflow_by_month)
 
       Logger.info("Data processing completed successfully")
 
-      %{state |
-        accounts: accounts,
-        categories: categories,
-        payees: payees,
-        transactions: transactions,
-        net_worth_by_month: net_worth_by_month,
-        cashflow_by_month: cashflow_by_month,
-        metrics: metrics,
-        last_updated: DateTime.utc_now()
-      }
+      Logger.info("Loaded accounts: #{inspect(accounts)}")
+      Logger.info("Loaded categories: #{inspect(categories)}")
+      Logger.info("Loaded payees: #{inspect(payees)}")
+      Logger.info("Loaded transactions: #{inspect(transactions)}")
 
+      Logger.info("Account groups: #{inspect(state.account_groups)}")
+      Logger.info("Net worth by month: #{inspect(net_worth_by_month)}")
+      Logger.info("Cashflow by month: #{inspect(cashflow_by_month)}")
+      Logger.info("Metrics: #{inspect(metrics)}")
+
+      struct(
+        __MODULE__,
+        Map.merge(Map.from_struct(state), %{
+          accounts: accounts,
+          categories: categories,
+          payees: payees,
+          transactions: transactions,
+          net_worth_by_month: net_worth_by_month,
+          cashflow_by_month: cashflow_by_month,
+          metrics: metrics,
+          last_updated: DateTime.utc_now()
+        })
+      )
     rescue
       error ->
         Logger.warning("Failed to load data from API, using demo data: #{inspect(error)}")
@@ -153,23 +170,41 @@ defmodule ActualDashboard.DataCache do
     ]
 
     demo_transactions = [
-      %{"id" => "1", "account" => "1", "category" => "1", "amount" => 8000_00, "date" => "2024-01-01"},
-      %{"id" => "2", "account" => "2", "category" => "2", "amount" => -800_00, "date" => "2024-01-05"},
-      %{"id" => "3", "account" => "2", "category" => "3", "amount" => -300_00, "date" => "2024-01-10"}
+      %{
+        "id" => "1",
+        "account" => "1",
+        "category" => "1",
+        "amount" => 8000_00,
+        "date" => "2024-01-01"
+      },
+      %{
+        "id" => "2",
+        "account" => "2",
+        "category" => "2",
+        "amount" => -800_00,
+        "date" => "2024-01-05"
+      },
+      %{
+        "id" => "3",
+        "account" => "2",
+        "category" => "3",
+        "amount" => -300_00,
+        "date" => "2024-01-10"
+      }
     ]
 
     demo_net_worth = %{
       "2024-01" => %{
         "assets_liquid" => 65000,
-        "assets_restricted" => 120000,
-        "assets_physical" => 450000,
-        "liabilities_physical" => -280000
+        "assets_restricted" => 120_000,
+        "assets_physical" => 450_000,
+        "liabilities_physical" => -280_000
       },
       "2024-02" => %{
         "assets_liquid" => 66200,
-        "assets_restricted" => 122000,
-        "assets_physical" => 452000,
-        "liabilities_physical" => -278000
+        "assets_restricted" => 122_000,
+        "assets_physical" => 452_000,
+        "liabilities_physical" => -278_000
       }
     }
 
@@ -180,16 +215,19 @@ defmodule ActualDashboard.DataCache do
 
     Logger.info("Using demo data for dashboard")
 
-    %{state |
-      accounts: demo_accounts,
-      categories: demo_categories,
-      payees: [],
-      transactions: demo_transactions,
-      net_worth_by_month: demo_net_worth,
-      cashflow_by_month: demo_cashflow,
-      metrics: %{},
-      last_updated: DateTime.utc_now()
-    }
+    struct(
+      __MODULE__,
+      Map.merge(Map.from_struct(state), %{
+        accounts: demo_accounts,
+        categories: demo_categories,
+        payees: [],
+        transactions: demo_transactions,
+        net_worth_by_month: demo_net_worth,
+        cashflow_by_month: demo_cashflow,
+        metrics: %{},
+        last_updated: DateTime.utc_now()
+      })
+    )
   end
 
   defp default_account_groups do
@@ -200,7 +238,7 @@ defmodule ActualDashboard.DataCache do
       "assets_investment" => [],
       "assets_physical" => ["House Asset"],
 
-      # Liabilities  
+      # Liabilities
       "liabilities_installment" => [],
       "liabilities_physical" => ["Mortgage"],
       "liabilities_revolving" => [],
