@@ -100,7 +100,7 @@ defmodule ActualDashboard.DataCache do
       {:ok, accounts} = HttpClient.get_accounts()
       {:ok, categories} = HttpClient.get_categories()
       {:ok, payees} = HttpClient.get_payees()
-      {:ok, transactions} = HttpClient.get_transactions()
+      {:ok, transactions} = HttpClient.get_all_transactions()
 
       Logger.info("Loaded #{length(accounts)} accounts, #{length(categories)} categories, #{length(transactions)} transactions")
 

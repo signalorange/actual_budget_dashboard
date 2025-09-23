@@ -46,7 +46,7 @@ defmodule ActualDashboard.DataProcessor do
     category_map = categories |> Enum.into(%{}, fn cat -> {cat["id"], cat} end)
     
     transactions
-    |> Enum.filter(fn tx -> tx["category"] and not tx["transfer_id"] end)
+    |> Enum.filter(fn tx -> tx["category"] && is_nil(tx["transfer_id"]) end)
     |> Enum.group_by(fn tx ->
       date = parse_date(tx["date"])
       "#{date.year}-#{String.pad_leading(to_string(date.month), 2, "0")}"
@@ -75,7 +75,7 @@ defmodule ActualDashboard.DataProcessor do
     case Date.from_iso8601(date_string) do
       {:ok, date} -> date
       {:error, _} -> 
-        # Try parsing YYYYMMDD format
+        # Try parsing YYYYMMDD format (from direct SQLite)
         case String.length(date_string) do
           8 -> 
             year = String.slice(date_string, 0, 4) |> String.to_integer()
@@ -140,10 +140,15 @@ defmodule ActualDashboard.DataProcessor do
       amount = (tx["amount"] || 0) / 100
       category = Map.get(category_map, tx["category"], %{})
       
-      if Map.get(category, "is_income", false) do
-        {inc_acc + amount, exp_acc}
+      # Skip transfer transactions
+      if tx["transfer_id"] do
+        {inc_acc, exp_acc}
       else
-        {inc_acc, exp_acc + amount}
+        if Map.get(category, "is_income", false) do
+          {inc_acc + amount, exp_acc}
+        else
+          {inc_acc, exp_acc + amount}
+        end
       end
     end)
     

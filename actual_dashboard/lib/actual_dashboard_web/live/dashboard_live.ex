@@ -62,19 +62,22 @@ defmodule ActualDashboardWeb.DashboardLive do
               title="Total Assets" 
               value={@current_assets} 
               change={@assets_change}
-              color="green" 
+              color="green"
+              is_percentage={false}
             />
             <.summary_card 
               title="Total Debts" 
               value={@current_debts} 
               change={@debts_change}
-              color="red" 
+              color="red"
+              is_percentage={false}
             />
             <.summary_card 
               title="Net Worth" 
               value={@current_net_worth} 
               change={@net_worth_change}
-              color="blue" 
+              color="blue"
+              is_percentage={false}
             />
             <.summary_card 
               title="Savings Rate" 
@@ -318,7 +321,10 @@ defmodule ActualDashboardWeb.DashboardLive do
   defp prepare_cashflow_chart_data(_), do: %{labels: [], datasets: []}
 
   defp format_currency(amount) when is_number(amount) do
-    :erlang.float_to_binary(amount, decimals: 2)
+    # Convert to float if it's an integer
+    float_amount = if is_integer(amount), do: amount / 1.0, else: amount
+    
+    :erlang.float_to_binary(float_amount, decimals: 2)
     |> String.replace(~r/\B(?=(\d{3})+(?!\d))/, ",")
     |> then(fn str -> "$#{str}" end)
   end

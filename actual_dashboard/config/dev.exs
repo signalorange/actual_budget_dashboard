@@ -87,7 +87,3 @@ config :phoenix_live_view,
 config :swoosh, :api_client, false
 
 
-# Actual Budget API configuration
-config :actual_dashboard,
-  api_base_url: System.get_env("ACTUAL_HTTP_API_URL", "http://localhost:5007"),
-  api_key: System.get_env("ACTUAL_HTTP_API_KEY") || raise("ACTUAL_HTTP_API_KEY environment variable is required")

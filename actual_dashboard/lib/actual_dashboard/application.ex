@@ -4,6 +4,7 @@ defmodule ActualDashboard.Application do
   @moduledoc false
 
   use Application
+  require Logger
 
   @impl true
   def start(_type, _args) do
@@ -27,9 +28,22 @@ defmodule ActualDashboard.Application do
   end
 
   defp get_api_config do
+    api_key = Application.get_env(:actual_dashboard, :api_key, "demo_key_12345")
+    budget_sync_id = Application.get_env(:actual_dashboard, :budget_sync_id, "demo_sync_id")
+    
+    # Log warnings if using demo values
+    if api_key == "demo_key_12345" do
+      Logger.warning("Using demo API key. Set ACTUAL_HTTP_API_KEY environment variable.")
+    end
+    
+    if budget_sync_id == "demo_sync_id" do
+      Logger.warning("Using demo sync ID. Set ACTUAL_BUDGET_SYNC_ID environment variable.")
+    end
+    
     [
       base_url: Application.get_env(:actual_dashboard, :api_base_url, "http://localhost:5007"),
-      api_key: Application.fetch_env!(:actual_dashboard, :api_key)
+      api_key: api_key,
+      budget_sync_id: budget_sync_id
     ]
   end
 
