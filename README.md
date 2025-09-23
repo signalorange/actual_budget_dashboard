@@ -2,7 +2,7 @@
 
 A modern, real-time financial dashboard for Actual Budget built with **Elixir/Phoenix and LiveView**.
 
-![picture.png]
+![Actual Dashboard](./picture.png "Actual Dashboard")
 
 ## ✨ New Phoenix/LiveView Implementation
 
